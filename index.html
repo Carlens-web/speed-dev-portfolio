@@ -301,26 +301,34 @@
 
   async function loadProjects() {
     const container = document.getElementById('projects-container');
-    const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
+    try {
+      const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      container.innerHTML = '';
-      return;
+      if (error) {
+        container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Erro: ${error.message}</div>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = data.map(p => {
+        const tags = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+        const tagsHtml = tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+        return `
+          <div class="project-card">
+            <div class="project-code mono">${escapeHtml(p.code || '')}</div>
+            <div class="project-title">${escapeHtml(p.title)}</div>
+            <p class="project-desc">${escapeHtml(p.description)}</p>
+            ${tags.length ? `<div class="project-services">${tagsHtml}</div>` : ''}
+            <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="btn btn-primary">Visite o site →</a>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Falha ao conectar: ${err.message}</div>`;
     }
-
-    container.innerHTML = data.map(p => {
-      const tags = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-      const tagsHtml = tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
-      return `
-        <div class="project-card">
-          <div class="project-code mono">${escapeHtml(p.code || '')}</div>
-          <div class="project-title">${escapeHtml(p.title)}</div>
-          <p class="project-desc">${escapeHtml(p.description)}</p>
-          ${tags.length ? `<div class="project-services">${tagsHtml}</div>` : ''}
-          <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="btn btn-primary">Visite o site →</a>
-        </div>
-      `;
-    }).join('');
   }
 
   loadProjects();
