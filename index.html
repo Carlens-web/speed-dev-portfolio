@@ -287,11 +287,9 @@
   </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = "https://ftrgspmsymwfqkdazfal.supabase.co";
   const SUPABASE_KEY = "sb_publishable_5-MCefaEjP8wj7ojrU4dSA_n_N_H55R";
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   function escapeHtml(str) {
     const d = document.createElement('div');
@@ -302,12 +300,18 @@
   async function loadProjects() {
     const container = document.getElementById('projects-container');
     try {
-      const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/portfolio_projects?select=*&order=sort_order.asc`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
 
-      if (error) {
-        container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Erro: ${error.message}</div>`;
+      if (!res.ok) {
+        const errText = await res.text();
+        container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Erro (${res.status}): ${escapeHtml(errText)}</div>`;
         return;
       }
+
+      const data = await res.json();
       if (!data || data.length === 0) {
         container.innerHTML = '';
         return;
@@ -327,7 +331,7 @@
         `;
       }).join('');
     } catch (err) {
-      container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Falha ao conectar: ${err.message}</div>`;
+      container.innerHTML = `<div class="project-code mono" style="color:#e8613d;padding:20px 0;">Falha ao conectar: ${escapeHtml(err.message)}</div>`;
     }
   }
 
