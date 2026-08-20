@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Dev — Painel de Projetos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#12161c; --panel:#1c222b; --line:#2a323d; --text:#edeef0;
+    --muted:#8b93a1; --amber:#e8a33d; --teal:#2dd4bf; --red:#e8613d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px;}
+
+  header{border-bottom:1px solid var(--line);padding:20px 0;}
+  .headrow{display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-family:'JetBrains Mono',monospace;font-weight:800;display:flex;align-items:center;gap:8px;}
+  .logo .dot{width:8px;height:8px;background:var(--amber);border-radius:1px;}
+  .logout{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);border:1px solid var(--line);padding:8px 14px;border-radius:4px;background:none;cursor:pointer;}
+  .logout:hover{border-color:var(--red);color:var(--red);}
+
+  /* LOGIN */
+  #login-screen{min-height:90vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:40px;width:100%;max-width:380px;}
+  .login-box h1{font-family:'JetBrains Mono',monospace;font-size:1.3rem;margin-bottom:6px;}
+  .login-box p{color:var(--muted);font-size:0.9rem;margin-bottom:26px;}
+  label{display:block;font-size:0.78rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:6px;letter-spacing:0.05em;}
+  input{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    padding:12px 14px;color:var(--text);font-size:0.95rem;margin-bottom:18px;font-family:'Inter',sans-serif;
+  }
+  input:focus{outline:none;border-color:var(--amber);}
+  button{
+    width:100%;background:var(--amber);color:#12161c;font-weight:700;border:none;
+    padding:13px;border-radius:4px;font-size:0.95rem;cursor:pointer;font-family:'JetBrains Mono',monospace;
+    transition:background .2s;
+  }
+  button:hover{background:#f4b559;}
+  button:disabled{opacity:0.6;cursor:not-allowed;}
+  .error{color:var(--red);font-size:0.85rem;margin-top:14px;display:none;}
+
+  /* ADMIN */
+  #admin-screen{display:none;padding:40px 0 80px;}
+  .section-title{font-size:1.3rem;font-weight:700;margin-bottom:6px;}
+  .section-sub{color:var(--muted);font-size:0.9rem;margin-bottom:30px;}
+
+  .form-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:28px;margin-bottom:36px;}
+  .form-card h2{font-size:1rem;margin-bottom:20px;font-family:'JetBrains Mono',monospace;color:var(--teal);}
+  textarea{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    padding:12px 14px;color:var(--text);font-size:0.95rem;margin-bottom:18px;font-family:'Inter',sans-serif;
+    resize:vertical;min-height:80px;
+  }
+  textarea:focus,input:focus{outline:none;border-color:var(--amber);}
+  .hint{font-size:0.78rem;color:var(--muted);margin-top:-12px;margin-bottom:18px;}
+
+  .project-row{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:20px;margin-bottom:14px;display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
+  }
+  .project-row .code{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:6px;}
+  .project-row .title{font-weight:700;margin-bottom:6px;}
+  .project-row .desc{color:var(--muted);font-size:0.88rem;margin-bottom:8px;}
+  .project-row .url{font-size:0.8rem;color:var(--teal);word-break:break-all;}
+  .row-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+  .icon-btn{
+    background:none;border:1px solid var(--line);color:var(--muted);width:auto;
+    padding:8px 12px;font-size:0.78rem;border-radius:4px;white-space:nowrap;
+  }
+  .icon-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .icon-btn.danger:hover{border-color:var(--red);color:var(--red);}
+
+  #status{font-size:0.85rem;margin-top:10px;min-height:1.2em;}
+  #status.ok{color:var(--teal);}
+  #status.err{color:var(--red);}
+  #empty-state{color:var(--muted);font-size:0.9rem;padding:20px 0;}
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1 class="mono">Painel Speed Dev</h1>
+    <p>Entre com seu login do painel de agendamentos.</p>
+    <form id="login-form">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" required autocomplete="email">
+      <label for="password">Senha</label>
+      <input type="password" id="password" required autocomplete="current-password">
+      <button type="submit" id="login-btn">Entrar</button>
+      <p class="error" id="login-error">E-mail ou senha incorretos.</p>
+    </form>
+  </div>
+</div>
+
+<!-- PAINEL ADMIN -->
+<div id="admin-screen">
+  <header>
+    <div class="wrap headrow">
+      <div class="logo"><span class="dot"></span>SPEED_DEV <span style="color:var(--muted);font-weight:400;">/ admin</span></div>
+      <button class="logout" id="logout-btn">Sair</button>
+    </div>
+  </header>
+
+  <div class="wrap" style="margin-top:40px;">
+    <div class="section-title">Gerenciar projetos</div>
+    <div class="section-sub">O que você salvar aqui aparece automaticamente no portfólio público.</div>
+
+    <div class="form-card">
+      <h2 id="form-title">// Adicionar novo projeto</h2>
+      <form id="project-form">
+        <input type="hidden" id="project-id">
+        <label for="title">Nome do projeto</label>
+        <input type="text" id="title" required placeholder="Ex: Loja Online">
+        <label for="description">Descrição</label>
+        <textarea id="description" required placeholder="Descreva o que o projeto faz..."></textarea>
+        <label for="url">Link do site (visite o site)</label>
+        <input type="url" id="url" required placeholder="https://...">
+        <label for="tags">Tags (separadas por vírgula, opcional)</label>
+        <input type="text" id="tags" placeholder="Ex: React, Supabase">
+        <div class="hint">As tags aparecem como etiquetas no card do projeto.</div>
+        <button type="submit" id="save-btn">Salvar projeto</button>
+        <p id="status"></p>
+      </form>
+    </div>
+
+    <div id="projects-list"></div>
+    <div id="empty-state" style="display:none;">Nenhum projeto cadastrado ainda.</div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ftrgspmsymwfqkdazfal.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_5-MCefaEjP8wj7ojrU4dSA_n_N_H55R";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const loginScreen = document.getElementById('login-screen');
+  const adminScreen = document.getElementById('admin-screen');
+  const loginForm = document.getElementById('login-form');
+  const loginBtn = document.getElementById('login-btn');
+  const loginError = document.getElementById('login-error');
+  const logoutBtn = document.getElementById('logout-btn');
+  const projectForm = document.getElementById('project-form');
+  const projectsList = document.getElementById('projects-list');
+  const emptyState = document.getElementById('empty-state');
+  const statusEl = document.getElementById('status');
+  const saveBtn = document.getElementById('save-btn');
+  const formTitle = document.getElementById('form-title');
+
+  // ---- LOGIN ----
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Entrando...';
+    loginError.style.display = 'none';
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      loginError.style.display = 'block';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Entrar';
+    } else {
+      showAdmin();
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  async function checkSession() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) showAdmin();
+  }
+
+  function showAdmin() {
+    loginScreen.style.display = 'none';
+    adminScreen.style.display = 'block';
+    loadProjects();
+  }
+
+  // ---- CRUD DE PROJETOS ----
+  async function loadProjects() {
+    const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
+    projectsList.innerHTML = '';
+    if (error) {
+      emptyState.textContent = 'Erro ao carregar projetos: ' + error.message;
+      emptyState.style.display = 'block';
+      return;
+    }
+    if (!data || data.length === 0) {
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+    data.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'project-row';
+      row.innerHTML = `
+        <div>
+          <div class="code mono">${p.code || ''}</div>
+          <div class="title">${escapeHtml(p.title)}</div>
+          <div class="desc">${escapeHtml(p.description)}</div>
+          <div class="url">${escapeHtml(p.url)}</div>
+        </div>
+        <div class="row-actions">
+          <button class="icon-btn" onclick="editProject('${p.id}')">Editar</button>
+          <button class="icon-btn danger" onclick="deleteProject('${p.id}')">Excluir</button>
+        </div>
+      `;
+      projectsList.appendChild(row);
+    });
+    window._projectsCache = data;
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  window.editProject = function(id) {
+    const p = window._projectsCache.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('project-id').value = p.id;
+    document.getElementById('title').value = p.title;
+    document.getElementById('description').value = p.description;
+    document.getElementById('url').value = p.url;
+    document.getElementById('tags').value = p.tags || '';
+    formTitle.textContent = '// Editando projeto';
+    saveBtn.textContent = 'Salvar alterações';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.deleteProject = async function(id) {
+    if (!confirm('Tem certeza que quer excluir esse projeto?')) return;
+    const { error } = await sb.from('portfolio_projects').delete().eq('id', id);
+    if (error) {
+      setStatus('Erro ao excluir: ' + error.message, true);
+    } else {
+      setStatus('Projeto excluído.', false);
+      loadProjects();
+    }
+  };
+
+  projectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    saveBtn.disabled = true;
+    const id = document.getElementById('project-id').value;
+    const payload = {
+      title: document.getElementById('title').value,
+      description: document.getElementById('description').value,
+      url: document.getElementById('url').value,
+      tags: document.getElementById('tags').value,
+      code: 'PROJ-' + String(Date.now()).slice(-4),
+    };
+
+    let error;
+    if (id) {
+      // ao editar, mantém o code original
+      delete payload.code;
+      ({ error } = await sb.from('portfolio_projects').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('portfolio_projects').insert(payload));
+    }
+
+    saveBtn.disabled = false;
+    if (error) {
+      setStatus('Erro ao salvar: ' + error.message, true);
+    } else {
+      setStatus('Projeto salvo com sucesso!', false);
+      projectForm.reset();
+      document.getElementById('project-id').value = '';
+      formTitle.textContent = '// Adicionar novo projeto';
+      saveBtn.textContent = 'Salvar projeto';
+      loadProjects();
+    }
+  });
+
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg;
+    statusEl.className = isError ? 'err' : 'ok';
+    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  }
+
+  checkSession();
+</script>
+
+</body>
+</html>

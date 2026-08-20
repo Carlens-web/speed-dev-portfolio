@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Dev — Carlens Polynice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12161c;
+    --bg-alt: #171c23;
+    --panel: #1c222b;
+    --line: #2a323d;
+    --text: #edeef0;
+    --muted: #8b93a1;
+    --amber: #e8a33d;
+    --teal: #2dd4bf;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--amber);color:#12161c;}
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px;}
+
+  /* focus visibility */
+  a:focus-visible,button:focus-visible{outline:2px solid var(--amber);outline-offset:3px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;}
+  }
+
+  /* NAV */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(18,22,28,0.88);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 28px;max-width:1100px;margin:0 auto;
+  }
+  .logo{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:1.05rem;letter-spacing:0.02em;display:flex;align-items:center;gap:8px;}
+  .logo .dot{width:8px;height:8px;background:var(--amber);border-radius:1px;display:inline-block;}
+  .navlinks{display:flex;gap:28px;font-size:0.88rem;color:var(--muted);}
+  .navlinks a{transition:color .2s;}
+  .navlinks a:hover{color:var(--amber);}
+  .navlinks{display:none;}
+  @media(min-width:700px){.navlinks{display:flex;}}
+
+  /* HERO */
+  .hero{
+    padding:110px 0 90px;
+    position:relative;
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(ellipse 700px 400px at 15% 0%, rgba(232,163,61,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 20%, rgba(45,212,191,0.06), transparent 60%);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.18em;
+    color:var(--amber);
+    text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:10px;
+    margin-bottom:22px;
+    opacity:0;
+    animation:fadeUp .7s ease forwards;
+  }
+  .eyebrow::before{content:'';width:26px;height:1px;background:var(--amber);}
+  h1{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:800;
+    font-size:clamp(2.6rem, 7vw, 4.6rem);
+    line-height:1.02;
+    letter-spacing:-0.02em;
+    margin-bottom:22px;
+    opacity:0;
+    animation:fadeUp .7s .1s ease forwards;
+  }
+  h1 span{color:var(--amber);}
+  .hero p.lead{
+    max-width:560px;
+    color:var(--muted);
+    font-size:1.08rem;
+    margin-bottom:38px;
+    opacity:0;
+    animation:fadeUp .7s .2s ease forwards;
+  }
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;opacity:0;animation:fadeUp .7s .3s ease forwards;}
+  .btn{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.85rem;
+    font-weight:500;
+    padding:13px 24px;
+    border-radius:3px;
+    border:1px solid var(--line);
+    transition:all .2s;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-primary{background:var(--amber);color:#12161c;border-color:var(--amber);font-weight:700;}
+  .btn-primary:hover{background:#f4b559;transform:translateY(-1px);}
+  .btn-ghost{color:var(--text);}
+  .btn-ghost:hover{border-color:var(--amber);color:var(--amber);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+  /* scan line signature element */
+  .scan-strip{
+    margin-top:60px;
+    height:34px;
+    position:relative;
+    overflow:hidden;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;
+  }
+  .scan-bars{
+    display:flex;gap:3px;align-items:center;height:100%;width:200%;
+    animation:scrollBars 18s linear infinite;
+  }
+  .scan-bars span{
+    display:block;background:var(--line);flex-shrink:0;height:60%;width:3px;
+  }
+  .scan-bars span:nth-child(3n){width:6px;height:80%;}
+  .scan-bars span:nth-child(7n){width:2px;height:40%;}
+  @keyframes scrollBars{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .scan-line{
+    position:absolute;top:0;bottom:0;width:2px;background:var(--teal);
+    box-shadow:0 0 12px var(--teal);
+    animation:scanMove 3.2s ease-in-out infinite;
+  }
+  @keyframes scanMove{0%,100%{left:0%;}50%{left:100%;}}
+
+  /* SECTIONS */
+  section{padding:80px 0;}
+  .section-head{margin-bottom:48px;}
+  .tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;letter-spacing:0.18em;color:var(--teal);
+    text-transform:uppercase;margin-bottom:10px;display:block;
+  }
+  h2{font-size:clamp(1.7rem,4vw,2.3rem);font-weight:700;letter-spacing:-0.01em;}
+
+  /* SOBRE */
+  .about-grid{display:grid;grid-template-columns:1fr;gap:40px;}
+  @media(min-width:800px){.about-grid{grid-template-columns:1.1fr 0.9fr;}}
+  .about-text p{color:var(--muted);margin-bottom:16px;font-size:1.02rem;max-width:520px;}
+  .about-text strong{color:var(--text);font-weight:600;}
+  .stat-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:24px;
+  }
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line);}
+  .stat-row:last-child{border-bottom:none;}
+  .stat-label{font-size:0.85rem;color:var(--muted);}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--amber);}
+
+  /* PROJETOS */
+  .bg-alt{background:var(--bg-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .project-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:32px;margin-bottom:22px;position:relative;overflow:hidden;
+    transition:border-color .2s;
+  }
+  .project-card:hover{border-color:var(--amber);}
+  .project-code{
+    font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);
+    letter-spacing:0.1em;margin-bottom:14px;display:flex;align-items:center;gap:10px;
+  }
+  .project-code::after{content:'';flex:1;height:1px;background:var(--line);}
+  .project-title{font-size:1.35rem;font-weight:700;margin-bottom:10px;}
+  .project-desc{color:var(--muted);margin-bottom:20px;max-width:600px;}
+  .project-services{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+  .chip{
+    font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--teal);
+    border:1px solid rgba(45,212,191,0.3);padding:4px 10px;border-radius:20px;
+  }
+  .placeholder-card{
+    border:1px dashed var(--line);border-radius:6px;padding:32px;
+    display:flex;align-items:center;gap:16px;color:var(--muted);
+  }
+  .placeholder-card .plus{
+    width:38px;height:38px;border:1px dashed var(--line);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;
+  }
+
+  /* CONTATO */
+  .contact-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:700px){.contact-grid{grid-template-columns:repeat(3,1fr);}}
+  .contact-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:26px;transition:all .2s;display:block;
+  }
+  .contact-card:hover{border-color:var(--amber);transform:translateY(-2px);}
+  .contact-card .clabel{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;display:block;}
+  .contact-card .cvalue{font-size:1.05rem;font-weight:600;word-break:break-word;}
+
+  footer{
+    border-top:1px solid var(--line);padding:32px 0;text-align:center;
+    color:var(--muted);font-size:0.85rem;font-family:'JetBrains Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <div class="logo"><span class="dot"></span>SPEED_DEV</div>
+    <div class="navlinks">
+      <a href="#sobre">Sobre</a>
+      <a href="#projetos">Projetos</a>
+      <a href="#contato">Contato</a>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow mono">Disponível para oportunidades</span>
+    <h1>Carlens Polynice<br><span>constrói sistemas.</span></h1>
+    <p class="lead">Estudante autodidata de TI, buscando minha primeira oportunidade na área. Aprendendo na prática, um projeto real de cada vez, com foco total em crescer como desenvolvedor.</p>
+    <div class="hero-actions">
+      <a href="#projetos" class="btn btn-primary">Ver projetos</a>
+      <a href="#contato" class="btn btn-ghost">Falar comigo</a>
+    </div>
+    <div class="scan-strip" aria-hidden="true">
+      <div class="scan-bars">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="scan-line"></div>
+    </div>
+  </div>
+</section>
+
+<section id="sobre">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">// Sobre mim</span>
+      <h2>Da esteira do galpão para a linha de código</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-text">
+        <p>Sou <strong>novo na área de TI</strong> — comecei aprendendo programação por conta própria, buscando entender como os sistemas que uso todo dia no trabalho realmente funcionam por dentro.</p>
+        <p>Estou me dedicando aos estudos de programação de forma consistente, com o objetivo claro de conseguir minha <strong>primeira oportunidade profissional em TI</strong>.</p>
+        <p>Construo projetos práticos, como um sistema completo de agendamento com painel administrativo, pra aprender fazendo e mostrar que tenho base real pra trabalhar na área — não só teoria.</p>
+      </div>
+      <div class="stat-card mono">
+        <div class="stat-row"><span class="stat-label">STATUS</span><span class="stat-value">Aprendendo / Em busca de vaga</span></div>
+        <div class="stat-row"><span class="stat-label">FOCO</span><span class="stat-value">Desenvolvimento Web</span></div>
+        <div class="stat-row"><span class="stat-label">ORIGEM</span><span class="stat-value">Logística → TI</span></div>
+        <div class="stat-row"><span class="stat-label">PROJETOS</span><span class="stat-value">01 concluído</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="projetos" class="bg-alt">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">// Projetos</span>
+      <h2>O que já construí</h2>
+    </div>
+
+    <div id="projects-container">
+      <div class="project-code mono" style="text-align:center;padding:20px 0;">Carregando projetos...</div>
+    </div>
+
+    <div class="placeholder-card">
+      <div class="plus">+</div>
+      <div>Próximo projeto em construção — volte em breve.</div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://ftrgspmsymwfqkdazfal.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_5-MCefaEjP8wj7ojrU4dSA_n_N_H55R";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  async function loadProjects() {
+    const container = document.getElementById('projects-container');
+    const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
+
+    if (error || !data || data.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = data.map(p => {
+      const tags = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      const tagsHtml = tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+      return `
+        <div class="project-card">
+          <div class="project-code mono">${escapeHtml(p.code || '')}</div>
+          <div class="project-title">${escapeHtml(p.title)}</div>
+          <p class="project-desc">${escapeHtml(p.description)}</p>
+          ${tags.length ? `<div class="project-services">${tagsHtml}</div>` : ''}
+          <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="btn btn-primary">Visite o site →</a>
+        </div>
+      `;
+    }).join('');
+  }
+
+  loadProjects();
+</script>
+
+<section id="contato">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">// Contato</span>
+      <h2>Bora conversar</h2>
+    </div>
+    <div class="contact-grid">
+      <a class="contact-card" href="https://github.com/Carlens-web" target="_blank" rel="noopener">
+        <span class="clabel mono">GitHub</span>
+        <span class="cvalue">Carlens-web</span>
+      </a>
+      <a class="contact-card" href="https://wa.me/5545998172786" target="_blank" rel="noopener">
+        <span class="clabel mono">WhatsApp</span>
+        <span class="cvalue">(45) 99817-2786</span>
+      </a>
+      <a class="contact-card" href="mailto:carlenspolynice9@gmail.com">
+        <span class="clabel mono">E-mail</span>
+        <span class="cvalue">carlenspolynice9@gmail.com</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">SPEED_DEV © 2026 — Carlens Polynice</div>
+</footer>
+
+</body>
+</html>
