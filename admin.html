@@ -6,7 +6,6 @@
 <title>Speed Dev — Painel de Projetos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#12161c; --panel:#1c222b; --line:#2a323d; --text:#edeef0;
@@ -25,7 +24,6 @@
   .logout{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);border:1px solid var(--line);padding:8px 14px;border-radius:4px;background:none;cursor:pointer;}
   .logout:hover{border-color:var(--red);color:var(--red);}
 
-  /* LOGIN */
   #login-screen{min-height:90vh;display:flex;align-items:center;justify-content:center;padding:24px;}
   .login-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:40px;width:100%;max-width:380px;}
   .login-box h1{font-family:'JetBrains Mono',monospace;font-size:1.3rem;margin-bottom:6px;}
@@ -43,9 +41,8 @@
   }
   button:hover{background:#f4b559;}
   button:disabled{opacity:0.6;cursor:not-allowed;}
-  .error{color:var(--red);font-size:0.85rem;margin-top:14px;display:none;}
+  .error{color:var(--red);font-size:0.85rem;margin-top:14px;display:none;word-break:break-word;}
 
-  /* ADMIN */
   #admin-screen{display:none;padding:40px 0 80px;}
   .section-title{font-size:1.3rem;font-weight:700;margin-bottom:6px;}
   .section-sub{color:var(--muted);font-size:0.9rem;margin-bottom:30px;}
@@ -76,7 +73,7 @@
   .icon-btn:hover{border-color:var(--amber);color:var(--amber);}
   .icon-btn.danger:hover{border-color:var(--red);color:var(--red);}
 
-  #status{font-size:0.85rem;margin-top:10px;min-height:1.2em;}
+  #status{font-size:0.85rem;margin-top:10px;min-height:1.2em;word-break:break-word;}
   #status.ok{color:var(--teal);}
   #status.err{color:var(--red);}
   #empty-state{color:var(--muted);font-size:0.9rem;padding:20px 0;}
@@ -84,7 +81,6 @@
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
 <div id="login-screen">
   <div class="login-box">
     <h1 class="mono">Painel Speed Dev</h1>
@@ -95,12 +91,11 @@
       <label for="password">Senha</label>
       <input type="password" id="password" required autocomplete="current-password">
       <button type="submit" id="login-btn">Entrar</button>
-      <p class="error" id="login-error">E-mail ou senha incorretos.</p>
+      <p class="error" id="login-error"></p>
     </form>
   </div>
 </div>
 
-<!-- PAINEL ADMIN -->
 <div id="admin-screen">
   <header>
     <div class="wrap headrow">
@@ -139,7 +134,6 @@
 <script>
   const SUPABASE_URL = "https://ftrgspmsymwfqkdazfal.supabase.co";
   const SUPABASE_KEY = "sb_publishable_5-MCefaEjP8wj7ojrU4dSA_n_N_H55R";
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const loginScreen = document.getElementById('login-screen');
   const adminScreen = document.getElementById('admin-screen');
@@ -154,6 +148,16 @@
   const saveBtn = document.getElementById('save-btn');
   const formTitle = document.getElementById('form-title');
 
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function getToken() {
+    return localStorage.getItem('speeddev_access_token');
+  }
+
   // ---- LOGIN ----
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -163,25 +167,40 @@
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const { error } = await sb.auth.signInWithPassword({ email, password });
 
-    if (error) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.access_token) {
+        loginError.textContent = data.error_description || data.msg || 'E-mail ou senha incorretos.';
+        loginError.style.display = 'block';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Entrar';
+        return;
+      }
+
+      localStorage.setItem('speeddev_access_token', data.access_token);
+      showAdmin();
+    } catch (err) {
+      loginError.textContent = 'Falha ao conectar: ' + err.message;
       loginError.style.display = 'block';
       loginBtn.disabled = false;
       loginBtn.textContent = 'Entrar';
-    } else {
-      showAdmin();
     }
   });
 
-  logoutBtn.addEventListener('click', async () => {
-    await sb.auth.signOut();
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('speeddev_access_token');
     location.reload();
   });
 
-  async function checkSession() {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) showAdmin();
+  function checkSession() {
+    if (getToken()) showAdmin();
   }
 
   function showAdmin() {
@@ -192,42 +211,45 @@
 
   // ---- CRUD DE PROJETOS ----
   async function loadProjects() {
-    const { data, error } = await sb.from('portfolio_projects').select('*').order('sort_order', { ascending: true });
     projectsList.innerHTML = '';
-    if (error) {
-      emptyState.textContent = 'Erro ao carregar projetos: ' + error.message;
-      emptyState.style.display = 'block';
-      return;
-    }
-    if (!data || data.length === 0) {
-      emptyState.style.display = 'block';
-      return;
-    }
-    emptyState.style.display = 'none';
-    data.forEach(p => {
-      const row = document.createElement('div');
-      row.className = 'project-row';
-      row.innerHTML = `
-        <div>
-          <div class="code mono">${p.code || ''}</div>
-          <div class="title">${escapeHtml(p.title)}</div>
-          <div class="desc">${escapeHtml(p.description)}</div>
-          <div class="url">${escapeHtml(p.url)}</div>
-        </div>
-        <div class="row-actions">
-          <button class="icon-btn" onclick="editProject('${p.id}')">Editar</button>
-          <button class="icon-btn danger" onclick="deleteProject('${p.id}')">Excluir</button>
-        </div>
-      `;
-      projectsList.appendChild(row);
-    });
-    window._projectsCache = data;
-  }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolio_projects?select=*&order=sort_order.asc`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${getToken()}` }
+      });
+      const data = await res.json();
 
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str || '';
-    return d.innerHTML;
+      if (!res.ok) {
+        emptyState.textContent = 'Erro ao carregar projetos: ' + (data.message || res.status);
+        emptyState.style.display = 'block';
+        return;
+      }
+      if (!data || data.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+      data.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'project-row';
+        row.innerHTML = `
+          <div>
+            <div class="code mono">${escapeHtml(p.code || '')}</div>
+            <div class="title">${escapeHtml(p.title)}</div>
+            <div class="desc">${escapeHtml(p.description)}</div>
+            <div class="url">${escapeHtml(p.url)}</div>
+          </div>
+          <div class="row-actions">
+            <button class="icon-btn" onclick="editProject('${p.id}')">Editar</button>
+            <button class="icon-btn danger" onclick="deleteProject('${p.id}')">Excluir</button>
+          </div>
+        `;
+        projectsList.appendChild(row);
+      });
+      window._projectsCache = data;
+    } catch (err) {
+      emptyState.textContent = 'Falha ao conectar: ' + err.message;
+      emptyState.style.display = 'block';
+    }
   }
 
   window.editProject = function(id) {
@@ -245,12 +267,20 @@
 
   window.deleteProject = async function(id) {
     if (!confirm('Tem certeza que quer excluir esse projeto?')) return;
-    const { error } = await sb.from('portfolio_projects').delete().eq('id', id);
-    if (error) {
-      setStatus('Erro ao excluir: ' + error.message, true);
-    } else {
-      setStatus('Projeto excluído.', false);
-      loadProjects();
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${getToken()}` }
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setStatus('Erro ao excluir: ' + (data.message || res.status), true);
+      } else {
+        setStatus('Projeto excluído.', false);
+        loadProjects();
+      }
+    } catch (err) {
+      setStatus('Falha ao conectar: ' + err.message, true);
     }
   };
 
@@ -263,28 +293,50 @@
       description: document.getElementById('description').value,
       url: document.getElementById('url').value,
       tags: document.getElementById('tags').value,
-      code: 'PROJ-' + String(Date.now()).slice(-4),
     };
 
-    let error;
-    if (id) {
-      // ao editar, mantém o code original
-      delete payload.code;
-      ({ error } = await sb.from('portfolio_projects').update(payload).eq('id', id));
-    } else {
-      ({ error } = await sb.from('portfolio_projects').insert(payload));
-    }
+    try {
+      let res;
+      if (id) {
+        res = await fetch(`${SUPABASE_URL}/rest/v1/portfolio_projects?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        payload.code = 'PROJ-' + String(Date.now()).slice(-4);
+        res = await fetch(`${SUPABASE_URL}/rest/v1/portfolio_projects`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
 
-    saveBtn.disabled = false;
-    if (error) {
-      setStatus('Erro ao salvar: ' + error.message, true);
-    } else {
-      setStatus('Projeto salvo com sucesso!', false);
-      projectForm.reset();
-      document.getElementById('project-id').value = '';
-      formTitle.textContent = '// Adicionar novo projeto';
-      saveBtn.textContent = 'Salvar projeto';
-      loadProjects();
+      saveBtn.disabled = false;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setStatus('Erro ao salvar: ' + (data.message || res.status), true);
+      } else {
+        setStatus('Projeto salvo com sucesso!', false);
+        projectForm.reset();
+        document.getElementById('project-id').value = '';
+        formTitle.textContent = '// Adicionar novo projeto';
+        saveBtn.textContent = 'Salvar projeto';
+        loadProjects();
+      }
+    } catch (err) {
+      saveBtn.disabled = false;
+      setStatus('Falha ao conectar: ' + err.message, true);
     }
   });
 
